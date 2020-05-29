@@ -1,6 +1,6 @@
 ---
 title: "Saving time with ggplot and cowplot"
-author: "Theotime Colin"
+author: "Théotime Colin"
 date: "28/05/2020"
 output: pdf_document
 ---
