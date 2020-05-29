@@ -1,0 +1,340 @@
+---
+title: "Saving time with ggplot and cowplot"
+author: "Theotime Colin"
+date: "28/05/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(formatR)
+```
+
+## 1) Goals
+
+In this tutorial, you will learn to:
+* use in built datasets to formulate reproducible questions
+* make your code tidy and reproducible
+* use the pipe '%>%' operator from the 'tidyr' library
+* use grouping and data handling functions from the 'dplyr' library
+* use ggplot2 to make nice figures
+* assemble these figures into an elaborate panel
+
+I won't go into too much detail for any of these packages. Instead, this tutorial is designed to give you *just enough* information about how each package work and how to connect them to each other, so that you can get started and start self-learning details that you can apply to your research projects. You probably already know how some of these packages work, but I will explain a few useful tips that can be hard to come across if you don't know they exist.
+
+
+## 2) Libraries
+
+I usually start any R script with the command `rm(list=ls())` that erases any stored object from R's memory. Although this appears to be annoying at first because all the packages and datasets will have to be reloaded, it avoids confusion, and helps ensure your script can run smoothly every time R is launched again. It's better to fix the problems from the beginning than to write the whole script and realize there was a bit that depended on another script.
+
+Classicaly, you would load libraries using the `library()` function. Note there is another and sometimes more elegant way to load function from these packages. This can help keep code tidy and remember which function comes from which package. It also avoids loading libraries when only a few of their functions are used in a script. Finally, it avoids creating conflicts between libraries, as they may use the same name for a function that works differently and produces a different output.
+
+A function from a package can be simply loaded in the following way `package::function`:
+For example, to use the function `gather` from `dplyr`, this works `dplyr::group_by()` and it is identical to using `library(dplyr); group_by()`.
+
+Whenever it is possible, we will use the `package::function` syntax. Here we will call functions from the packages `cowplot` and `dplyr` this way and so we won't load them at the beginning. For some libraries this is impractical. This is notably the case for libraries that have functions that are repeatidly used in a script, or libraries that use specific operators like the `+` in `ggplot2` or the `%>%` from tidyr, that bind different rows of code together, so we will load these two packages directly at the beginning of our script. 
+
+```{r libraries}
+library(tidyr) # brings a tidy way to write and read code
+library(ggplot2) # makes pretty plots
+#library(cowplot) # builds panels, functions are called directly
+#library(dplyr) # contains useful functions to handle data, functions are called directly
+```
+
+\pagebreak
+
+## 3) The 'iris' dataset
+
+R has built-in datasets that are loaded with the environment or with packages, they allow to develop easily reproducible examples of code, bugs, and methods.
+Let's have a look at the most famous one in ecology, `iris`.
+
+```{r iris}
+head(iris,10)
+```
+
+We're going to ask a few classic ecology questions to illustrate how to make figures with `ggplot2`, panels with `cowplot`, and handle our data with `tidyr` and `dplyr`:  
+Do petal widths and petal lengths vary between species?  
+Do petal lengths vary with petal widths similarly between species?
+
+Pretty figures are worth better than all the p-values in the world, so we'll focus on that during this R user group session. There will be no stats.
+
+\pagebreak
+
+## 4) Do petal widths and petal lengths vary between species?
+
+A long time ago in a galaxy far far away, programmers used to make figures in the standard code installed with R, without any additional libraries. 
+
+For example, you can make a box and whiskers plot without loading any additional library by using the command `boxplot()`.
+
+Now almost every body is using the library `ggplot2` which for example contains `geom_boxplot()`, an equivalent to `boxplot()`.
+
+`boxplot()` and `geom_boxplot()` are pretty similar:
+
+```{r I_figures_1}
+boxplot(Petal.Width ~ Species, data=iris)
+
+ggplot(iris,aes(x=Species, y=Petal.Width))+
+  geom_boxplot()+
+  theme_classic()
+```
+\pagebreak
+
+If you want to make more complex figures, `ggplot2` is more flexible and easier to read than base R.
+
+This is an example if we want to add a legend and colors in base R:
+```{r I_figure_2_base}
+boxplot(Petal.Width ~ Species, data=iris,
+        range=+Inf, 
+        staplelty = 0, 
+        col=c('red','blue','green'), 
+        xlab='species', 
+        ylab='petal width',
+        names=c("I. setosa", "I. versicolor", "I. virginica"),
+        whisklty = 1
+)
+stripchart(Petal.Width ~ Species, data=iris, 
+           vertical = TRUE, 
+           method = "jitter",
+           add=T,
+           pch = 20,
+           group.names=c("I. setosa", "I. versicolor", "I. virginica")
+)
+legend("bottomright",legend=c("I. setosa", "I. versicolor", "I. virginica"),
+       fill=c('red','blue','green')
+)
+```
+
+It is just a simple plot but already a nightmare spreading to 18 rows.
+
+\pagebreak
+
+ggplot2 does this in six lines, and the graphics are already nicer:
+
+```{r I_figure_2_ggplot}
+ggplot(iris,aes(x=Species, y=Petal.Width, fill=Species))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width = 0.2)+
+  xlab("species")+
+  ylab("petal width")+
+  scale_x_discrete(labels=c("I. setosa", "I. versicolor", "I. virginica"))+
+  theme_classic()
+``` 
+
+\pagebreak
+
+And it's so easy to do it for `Petal.Length` too ! only 12 characters to change:
+
+```{r supp_plot_1}
+ggplot(iris,aes(x=Species, y=Petal.Length, fill=Species))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width = 0.2)+
+  xlab("species")+
+  ylab("petal length")+
+  scale_x_discrete(labels=c("I. setosa", "I. versicolor", "I. virginica"))+
+  theme_classic()
+```
+
+Note how to use one line per characteristic and the + at the end. This allows to comment any line to come back to it later
+
+\pagebreak
+
+Reviewers will probably want you to report group mean +/- sd. You could do it in base R, it's fine for three groups, but can rapidly become annoying.
+
+```{r group_sd_base}
+levels(iris$Species)
+data.frame(value=c(mean(iris$Petal.Width[iris$Species=='setosa']),
+                   mean(iris$Petal.Width[iris$Species=='versicolor']),
+                   mean(iris$Petal.Width[iris$Species=='virginica']),
+                   sd(iris$Petal.Width[iris$Species=='setosa']),
+                   sd(iris$Petal.Width[iris$Species=='versicolor']),
+                   sd(iris$Petal.Width[iris$Species=='virginica'])),
+           key=c("mean","mean","mean","sd","sd","sd"),
+           species=c("setosa","versicolor","virginica","setosa","versicolor","virginica")
+)
+
+```
+
+It's long to write and the code is hard to read.
+
+`tidyr` and `dplyr` allow you to get this info quickly. First we transfer the dataset from the *wide* to the *long* format. Then we create groups, here we want to group our data per `Species` and `type`, and for each of these we want to summarise the group values into means, sd and sample size:
+
+```{r group_sd_tidy}
+iris %>%
+  gather(type,measurement,Petal.Length:Petal.Width) %>% #from wide to long format
+  dplyr::group_by(Species,type) %>%
+  dplyr::summarise(mean=mean(measurement),
+            sd=sd(measurement),
+            n=dplyr::n())
+```
+
+`tidyr` makes the code much easier to read and much shorter. We could also have made a loop that subsets the dataset for each group and calculate each of these and them stores them back into objects, but this takes up a lot more memory and processing power, and it slows down your computer a lot for large datasets.
+`tidyr` is a nice way to do these operations faster.
+
+\pagebreak
+
+You can also make a plot directly from the output of `tidyr` without saving the output of tidyr into a new table, so it doesn't store any object in R's memory (if you have memory issues that can be very useful):
+
+```{r group_sd_tidy_supp_fig}
+iris %>%
+  gather(type,measurement,Petal.Length:Petal.Width) %>% #from wide to long format
+  dplyr::group_by(Species,type) %>%
+  dplyr::summarise(mean=mean(measurement),
+            sd=sd(measurement),
+            n=dplyr::n()) %>%
+  ggplot(aes(x=Species,y=mean))+
+  geom_bar(stat = "identity")+
+  facet_wrap(~type)+
+  theme_classic()
+```
+
+\pagebreak
+
+## 5) Do petal lengths vary with petal widths similarly between species?
+
+We can make this figure in base R, but this code is atrocious, and imagine if we had more grouping variables, we would have to write it all again.
+
+```{r II_plot_1}
+plot(Petal.Width~Petal.Length,data=iris,pch=20,
+     xlab='petal length',
+     ylab='petal width',
+     col=c('red','blue','green')[iris$Species])
+clip(min(iris$Petal.Length[iris$Species=="setosa"]),
+     max(iris$Petal.Length[iris$Species=="setosa"]), -100, +100)
+abline(lm(Petal.Width~Petal.Length, data=iris[iris$Species=="setosa",]),col="red")
+clip(min(iris$Petal.Length[iris$Species=="versicolor"]),
+     max(iris$Petal.Length[iris$Species=="versicolor"]), -100, +100)
+abline(lm(Petal.Width~Petal.Length, data=iris[iris$Species=="versicolor",]), col="blue")
+clip(min(iris$Petal.Length[iris$Species=="virginica"]),
+     max(iris$Petal.Length[iris$Species=="virginica"]), -100, +100)
+abline(lm(Petal.Width~Petal.Length, data=iris[iris$Species=="virginica",]), col="green")
+legend("bottomright",legend=c("I. setosa", "I. versicolor", "I. virginica"),
+       fill=c('red','blue','green'))
+```
+
+\pagebreak
+
+With ggplot this takes 6 lines of code:
+
+```{r II_plot_2, warning=F, message=F}
+ggplot(iris,aes(x=Petal.Length,y=Petal.Width,colour=Species, group=Species))+
+  geom_point()+ 
+  geom_smooth(method = "lm", fill = NA)+
+  xlab("petal length")+
+  ylab("petal width")+
+  theme_classic()
+```
+\pagebreak
+
+It is also much easier to make this figure if we had two different locations. We can fabricate another column with two locations to demonstrate this:
+```{r two_locations, message=F}
+iris<-iris %>%
+  dplyr::mutate(location=rep(c("Blue Mountains","Nowra"),dim(iris)[1]/2)) #this code creates a new column with two locations
+
+iris %>%
+  head()
+
+ggplot(iris,aes(x=Petal.Length, y=Petal.Width, colour=Species, group=Species))+
+  geom_point()+ 
+  geom_smooth(method = "lm", fill = NA)+
+  xlab("petal length")+
+  ylab("petal width")+
+  facet_wrap(~location)+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(colour="white", fill="white"))+
+  theme_classic()
+```
+
+And again we can summarise the values for each group, like in question I. This time we will save it in the object "results" and export this result as a csv file, to include in our manuscript.
+
+```{r II_summary}
+results<-iris %>%
+  gather(type,measurement,Petal.Length:Petal.Width) %>%
+  dplyr::group_by(Species,type,location) %>%
+  dplyr::summarise(mean=mean(measurement),
+            sd=sd(measurement),
+            n=dplyr::n())
+
+write.csv(results,"table 1 - mean - sd - n.csv",row.names=F) #the file "table 1 - mean - sd - n.csv" has been saved in your working directory
+```
+
+\pagebreak
+
+## 6) Making panels with cowplot
+
+We want a panel with:
+* the two boxplots side by side
+* the scatter plot under that
+* one common legend
+* panel names A B C
+
+First we need to store our plots into objects, and the two first boxplots shouldn't have a legend.
+
+Of course in a real script we wouldn't rewrite that, but here we do just to show how compact the final code is.
+The *whole* code is below:
+
+
+```{r whole_script, warning=F, message=FALSE, fig.height=8, fig.width=7}
+#our first boxplot
+boxplot.width <- ggplot(iris,aes(x=Species, y=Petal.Width, fill=Species))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width = 0.2)+
+  xlab("species")+
+  ylab("petal width")+
+  scale_x_discrete(labels=c("I. setosa", "I. versicolor", "I. virginica"))+
+  theme_classic()
+
+#our second boxplot
+boxplot.length <- ggplot(iris,aes(x=Species, y=Petal.Length, fill=Species))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width = 0.2)+
+  xlab("species")+
+  ylab("petal length")+
+  scale_x_discrete(labels=c("I. setosa", "I. versicolor", "I. virginica"))+
+  theme_classic()
+
+#our scatterplot
+scatterplot <- ggplot(iris,aes(x=Petal.Length,y=Petal.Width,colour=Species, group=Species))+
+  geom_point()+ 
+  geom_smooth(method = "lm", fill = NA)+  # if you remove the fill = NA, you get a 95% confidence interval
+  xlab("petal length")+
+  ylab("petal width")+
+  facet_wrap(~location)+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(colour="white", fill="white"))+
+  theme_classic()
+
+#now we create a first panel, with the two boxplots
+top<-cowplot::plot_grid(boxplot.width + theme(legend.position="none"),
+               boxplot.length + theme(legend.position="none"),
+               labels = c('A', 'B'),
+               align = 'h')
+
+#here we add the scatterplot to the panel
+cowplot::plot_grid(top,scatterplot,labels=c('','C'),ncol=1, rel_heights=c(1,1.8))
+
+# we'll save this as a high quality compressed TIFF image that any journal will accept:
+ggsave("Figures/Figure 1.tiff",
+       compression="lzw", #make sure to always include this, or your file will be heavy
+       width=220,height=200,units="mm")
+```
+
+\pagebreak
+Additionaly, we should report the version of R and the packages attached, and cite them.
+I usually copy the output of this as a comment at the end of my scripts.
+
+```{r citing}
+sessionInfo()
+citation()
+citation("ggplot2")
+citation("cowplot")
+citation("tidyr")
+citation("dplyr")
+```
+
+To share your whole code and allow your results to be reproduced by anybody at anytime,
+you can save this output and share it online
+```{r dput}
+dput(iris)
+```

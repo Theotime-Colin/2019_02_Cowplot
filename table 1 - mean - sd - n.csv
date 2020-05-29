@@ -1,0 +1,13 @@
+"Species","type","location","mean","sd","n"
+"setosa","Petal.Length","Blue Mountains",1.456,0.20631690833925,25
+"setosa","Petal.Length","Nowra",1.468,0.137598449603669,25
+"setosa","Petal.Width","Blue Mountains",0.228,0.0791622805802528,25
+"setosa","Petal.Width","Nowra",0.264,0.125432584814845,25
+"versicolor","Petal.Length","Blue Mountains",4.308,0.479513642489276,25
+"versicolor","Petal.Length","Nowra",4.212,0.464865571966778,25
+"versicolor","Petal.Width","Blue Mountains",1.352,0.193907194296653,25
+"versicolor","Petal.Width","Nowra",1.3,0.202072594216369,25
+"virginica","Petal.Length","Blue Mountains",5.564,0.545343928177439,25
+"virginica","Petal.Length","Nowra",5.54,0.569356361751291,25
+"virginica","Petal.Width","Blue Mountains",2.076,0.278806982217686,25
+"virginica","Petal.Width","Nowra",1.976,0.266583320308429,25
