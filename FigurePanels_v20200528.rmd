@@ -12,7 +12,8 @@ library(formatR)
 
 ## 1) Goals
 
-In this tutorial, you will learn to:
+In this tutorial, you will learn to:  
+
 * use in built datasets to formulate reproducible questions
 * make your code tidy and reproducible
 * use the pipe '%>%' operator from the 'tidyr' library
@@ -263,6 +264,7 @@ write.csv(results,"table 1 - mean - sd - n.csv",row.names=F) #the file "table 1 
 ## 6) Making panels with cowplot
 
 We want a panel with:
+
 * the two boxplots side by side
 * the scatter plot under that
 * one common legend
